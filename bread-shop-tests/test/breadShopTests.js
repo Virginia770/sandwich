@@ -1,9 +1,9 @@
 const {expect} =require("chai");
 const {Builder, By} = require("selenium-webdriver");
 
-describe("First Suite", function(){
+describe("Sandwich Suite", function(){
     this.timeout(5000);
-    it("First test", async function(){
+    it("selects the bread type", async function(){
         const chromePath = "chromedriver.exe";
         let driver = await new Builder().forBrowser('chrome').build();
         await driver.manage().setTimeouts({implicit:1000});
