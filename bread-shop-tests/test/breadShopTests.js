@@ -3,12 +3,29 @@ const { Builder, By, Select } = require("selenium-webdriver");
 
 describe("Sandwich Suite", function () {
     this.timeout(5000);
-    it("selects the bread type", async function () {
-        const chromePath = "chromedriver.exe";
-        let driver = await new Builder().forBrowser('chrome').build();
+    let driver;
+
+    beforeEach(async function () {
+        await driver.get("http://localhost:4200/order/sandwich");
+    });
+
+    this.afterEach(async function () {
+
+    });
+
+    before(async function () {
+        driver = await new Builder().forBrowser('chrome').build();
         await driver.manage().setTimeouts({ implicit: 1000 });
 
-        await driver.get("http://localhost:4200/order/sandwich");
+
+    });
+
+    after(async function () {
+        //teardown
+        driver.quit();
+    });
+
+    it("selects the bread type", async function () {
 
         let title = await driver.getTitle();
         expect(title).to.equal("Order a Sandwich | BreadShop");
@@ -22,15 +39,9 @@ describe("Sandwich Suite", function () {
         let selectedValue = await selectedElement.getText();
         expect(selectedValue).to.equal("rye bread");
 
-        //teardown
-        await driver.quit();
-    })
+    });
 
     it("selects the main filling", async function () {
-        let driver = await new Builder().forBrowser('chrome').build();
-        await driver.manage().setTimeouts({ implicit: 1000 });
-
-        await driver.get("http://localhost:4200/order/sandwich");
 
         //act
         let mainFillingElement = await driver.findElement(By.id("form-select-main-filling"));
@@ -42,8 +53,5 @@ describe("Sandwich Suite", function () {
         let selectedValue = await selectedElement.getText();
         expect(selectedValue).to.equal("tofu");
 
-        //teardown
-        await driver.quit();
-
-    })
+    });
 })
