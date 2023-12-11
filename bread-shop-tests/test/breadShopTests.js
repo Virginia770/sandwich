@@ -1,49 +1,106 @@
-const { expect } = require("chai");
-const { Builder, By, Select } = require("selenium-webdriver");
+const { before, beforeEach, after } = require('mocha');
+const { Builder } = require('selenium-webdriver');
+const expect = require('chai').expect;
+const { SandwichPage } = require('../page/sandwichPage');
 
-describe("Sandwich Suite", function () {
+describe('sandwich order', function() {
+
     this.timeout(5000);
-    it("selects the bread type", async function () {
-        const chromePath = "chromedriver.exe";
-        let driver = await new Builder().forBrowser('chrome').build();
-        await driver.manage().setTimeouts({ implicit: 1000 });
+    let driver;
+    let sandwichPage;
 
-        await driver.get("http://localhost:4200/order/sandwich");
+    before(async function() {
+        driver = await new Builder().forBrowser('chrome').build();
+        // uncomment when you want to use an implicit wait for this driver session
+        //await driver.manage().setTimeouts({ implicit: 1000 }); 
+    });
+ 
+    beforeEach(async function() {
+        //setup
+       // await driver.get('http://localhost:4200/order/sandwich');
+        browser.url('http://localhost:4200/order/sandwich');
 
-        let title = await driver.getTitle();
-        expect(title).to.equal("Order a Sandwich | BreadShop");
+        sandwichPage = new SandwichPage(driver);
+        sandwichPage.validatePage();
+    });
 
-        //act
-        let ryeBreadOptionElement = await driver.findElement(By.id("bread-type-rye"));
-        await ryeBreadOptionElement.click();
-
-        //assert
-        let selectedElement = await driver.findElement(By.className("bread-type-value"));
-        let selectedValue = await selectedElement.getText();
-        expect(selectedValue).to.equal("rye bread");
-
+    after(async function() {
         //teardown
         await driver.quit();
-    })
+    });
+ 
+   // describe('bread type selection', function() {
+    describe('bread type selection', () => {
+        it('displays the selected value', async function() {
+            //act
+            await sandwichPage.selectRyeBreadOption();
+    
+            //assert
+            let selectedBreadValue = await sandwichPage.getBreadTypeOverview();
+            expect(selectedBreadValue).to.equal("rye bread");
+        });
 
-    it("selects the main filling", async function () {
-        let driver = await new Builder().forBrowser('chrome').build();
-        await driver.manage().setTimeouts({ implicit: 1000 });
-
-        await driver.get("http://localhost:4200/order/sandwich");
-
+        it('removes the placeholder text', async function() {
+            //act
+            await sandwichPage.selectRyeBreadOption();
+    
+            //assert
+            let breadTypePlaceholders = await sandwichPage.getBreadTypePlaceholders();
+            expect(breadTypePlaceholders).to.have.length(0);
+        });
+    });
+    
+    it('selects the main filling', async function() {
         //act
-        let mainFillingElement = await driver.findElement(By.id("form-select-main-filling"));
-        let select = new Select(mainFillingElement);
-        await select.selectByValue("tofu");
+        await sandwichPage.selectTofuFillingOption();
 
         //assert
-        let selectedElement = await driver.findElement(By.className("main-filling-value"));
-        let selectedValue = await selectedElement.getText();
-        expect(selectedValue).to.equal("tofu");
+        let selectedMainFillingValue = await sandwichPage.getMainFillingOverview();
+        expect(selectedMainFillingValue).to.equal("tofu");
+    });
 
-        //teardown
-        await driver.quit();
+    it('updates the total price when the bread type is selected', async function() {
+        //act
+        expect(await sandwichPage.getTotalPrice()).to.equal("$0");
+        
+        await sandwichPage.selectRyeBreadOption();
+        
+        //assert
+        expect(await sandwichPage.getTotalPrice()).to.equal("$6");
+        
+    });
 
-    })
-})
+    it("selects extra fillings", async function() {
+        //act
+        await sandwichPage.selectExtraSaladFilling();
+        await sandwichPage.selectExtraKetchupFilling();
+
+        //assert
+        let selectedExtraFillingValue = await sandwichPage.getExtraFillingOverview();
+        expect(selectedExtraFillingValue).to.equal("salad, ketchup");
+    });
+
+    describe('when the network has high latency', function() {
+        beforeEach(async function() {
+            await driver.setNetworkConditions({
+                offline: false,
+                latency: 1000,
+                download_throughput: 35 * 1024,
+                upload_throughput: 50 * 1024
+            })
+        });
+
+        afterEach(async function() {
+            await driver.deleteNetworkConditions();
+        });
+
+        it('displays spinning wheel when checking promo code', async function() {
+            //act
+            await sandwichPage.setValidPromoCode();
+            await sandwichPage.redeemPromoCode();
+
+            //assert
+            expect(await sandwichPage.getSpinner().isDisplayed()).to.be.true;
+        });
+    });
+});
